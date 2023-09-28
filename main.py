@@ -7,9 +7,6 @@ tokens = []
 gaps = []
 model = []
 
-height_threshold_pixel = None
-row_threshold_pixel = None
-
 
 def read():
     global photo
@@ -116,8 +113,7 @@ def normalize(photo):
 
 
 def find_line_height(photo):
-    global height_threshold_pixel
-    height_threshold_pixel = find_height_threshold(photo)
+    height_threshold = find_height_threshold(photo)
     maxr = 0
     r, l = photo.shape
     for i in range(l):
@@ -125,12 +121,12 @@ def find_line_height(photo):
         for k in range(r):
             if photo[k][i] == 255:
                 e = e + 1
-                if e > height_threshold_pixel:
+                if e > height_threshold:
                     maxr = max(k, maxr)
                     break
             else:
                 e = 0
-    if maxr < height_threshold_pixel:
+    if maxr < height_threshold:
         maxr = r
     return maxr
 
@@ -170,8 +166,8 @@ def right_trim(photo):
 
 
 def add_row_tokens(photo):
-    global row_threshold_pixel, tokens
-    row_threshold_pixel = find_row_threshold(photo)
+    global tokens
+    row_threshold = find_row_threshold(photo)
     lastblock = 0
     e = 0
 
@@ -190,7 +186,7 @@ def add_row_tokens(photo):
             e = e + 1
         else:
             e = 0
-        if e > row_threshold_pixel:
+        if e > row_threshold:
             tokens.append(photo[:, lastblock:i + 1])
             lastblock = i + 1
             e = 0
@@ -224,6 +220,7 @@ def find_Answer():
 def run():
     read()
     tokenize()
+
     train()
     find_Answer()
 
