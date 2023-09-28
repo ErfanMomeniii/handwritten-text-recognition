@@ -235,19 +235,26 @@ def tokenize():
     return
 
 
-def is_white(photo):
-    for i in photo:
-        if i != 255:
-            return False
+def is_white(token_photo):
+    l, r = token_photo.shape
+
+    for i in range(l):
+        for j in range(r):
+            if token_photo[i][j] != 255:
+                return False
 
     return True
 
 
 def filter_tokens():
     global tokens
+    filtered_tokens = []
     for i in tokens:
-        if is_white(i):
-            tokens.remove(i)
+        if not is_white(i):
+            filtered_tokens.append(i)
+
+    tokens = filtered_tokens
+
     return
 
 
