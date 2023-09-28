@@ -10,26 +10,35 @@ model = []
 
 def read():
     global photo
-    args = sys.argv[1:]
+
     path = ""
+    args = sys.argv[1:]
+
     if len(args) >= 2:
         path = args[1]
+
     photo = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+
     return
 
 
 def delete_outliers(arr):
-    m, s = np.array(arr).mean(), np.array(arr).std()
     res = []
+
+    m, s = np.array(arr).mean(), np.array(arr).std()
+
     for i in arr:
         if abs(i - m) <= s:
             res.append(i)
+
     return res
 
 
 def find_height_threshold(photo):
     gaps = []
+
     l, r = photo.shape
+
     for i in range(r):
         e = 0
         for j in range(l):
@@ -38,16 +47,21 @@ def find_height_threshold(photo):
             else:
                 if e != 0:
                     gaps.append(e)
+
                 e = 0
         if e != 0:
             gaps.append(e)
+
     gaps = delete_outliers(gaps)
+
     return np.array(gaps).mean()
 
 
 def find_row_threshold(photo):
     gaps = []
+
     l, r = photo.shape
+
     for i in range(l):
         e = 0
         for j in range(r):
@@ -59,7 +73,9 @@ def find_row_threshold(photo):
                 e = 0
         if e != 0:
             gaps.append(e)
+
     gaps = delete_outliers(gaps)
+
     return np.array(gaps).mean()
 
 
@@ -101,6 +117,7 @@ def delete_last_column(photo):
 
 def normalize(photo):
     photo[photo > 127] = 255
+
     while delete_first_row(photo):
         photo = photo[1:, :]
     while delete_last_row(photo):
@@ -109,16 +126,19 @@ def normalize(photo):
         photo = photo[:, 1:]
     while delete_last_column(photo):
         photo = photo[:, :-1]
+
     return photo
 
 
 def find_line_height(photo):
-    height_threshold = find_height_threshold(photo)
     maxr = 0
-    r, l = photo.shape
-    for i in range(l):
+    height_threshold = find_height_threshold(photo)
+
+    l, r = photo.shape
+
+    for i in range(r):
         e = 0
-        for k in range(r):
+        for k in range(l):
             if photo[k][i] == 255:
                 e = e + 1
                 if e > height_threshold:
@@ -126,8 +146,10 @@ def find_line_height(photo):
                     break
             else:
                 e = 0
+
     if maxr < height_threshold:
-        maxr = r
+        maxr = l
+
     return maxr
 
 
@@ -145,6 +167,7 @@ def left_trim(photo):
             e = e + 1
         else:
             return photo[:, e:]
+
     return []
 
 
@@ -162,14 +185,17 @@ def right_trim(photo):
             e = e + 1
         else:
             return photo[:, :r - e + 1]
+
     return []
 
 
 def add_row_tokens(photo):
     global tokens
-    row_threshold = find_row_threshold(photo)
-    lastblock = 0
+
+    last_block = 0
     e = 0
+
+    row_threshold = find_row_threshold(photo)
 
     photo = left_trim(photo)
     photo = right_trim(photo)
@@ -187,11 +213,14 @@ def add_row_tokens(photo):
         else:
             e = 0
         if e > row_threshold:
-            tokens.append(photo[:, lastblock:i + 1])
-            lastblock = i + 1
+            tokens.append(photo[:, last_block:i + 1])
+            last_block = i + 1
             e = 0
-    if lastblock < r:
-        tokens.append(photo[:, lastblock:])
+
+    if last_block < r:
+        tokens.append(photo[:, last_block:])
+
+    return
 
 
 def tokenize():
@@ -202,6 +231,23 @@ def tokenize():
         cut = photo[:lh + 1, :]
         add_row_tokens(cut)
         photo = photo[lh + 1:, :]
+
+    return
+
+
+def is_white(photo):
+    for i in photo:
+        if i != 255:
+            return False
+
+    return True
+
+
+def filter_tokens():
+    global tokens
+    for i in tokens:
+        if is_white(i):
+            tokens.remove(i)
     return
 
 
@@ -220,7 +266,7 @@ def find_Answer():
 def run():
     read()
     tokenize()
-
+    filter_tokens()
     train()
     find_Answer()
 
