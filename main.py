@@ -45,14 +45,14 @@ def find_height_threshold(photo):
             if photo[j][i] == 255:
                 e = e + 1
             else:
-                if e != 0:
+                if e != 0 and e != j:
                     gaps.append(e)
-
                 e = 0
-        if e != 0:
-            gaps.append(e)
 
     gaps = delete_outliers(gaps)
+
+    if not gaps:
+        return l
 
     return np.array(gaps).mean()
 
@@ -68,13 +68,13 @@ def find_row_threshold(photo):
             if photo[i][j] == 255:
                 e = e + 1
             else:
-                if e != 0:
+                if e != 0 and e != j:
                     gaps.append(e)
                 e = 0
-        if e != 0:
-            gaps.append(e)
 
     gaps = delete_outliers(gaps)
+    if not gaps:
+        return l
 
     return np.array(gaps).mean()
 
@@ -131,9 +131,10 @@ def normalize(photo):
 
 
 def find_line_height(photo):
-    maxr = 0
-    height_threshold = find_height_threshold(photo)
+    height = 0
 
+    photo = normalize(photo)
+    height_threshold = find_height_threshold(photo)
     l, r = photo.shape
 
     for i in range(r):
@@ -142,51 +143,17 @@ def find_line_height(photo):
             if photo[k][i] == 255:
                 e = e + 1
                 if e > height_threshold:
-                    maxr = max(k, maxr)
+                    height = max(k, height)
                     break
             else:
                 e = 0
+        if e <= height_threshold:
+            return l
 
-    if maxr < height_threshold:
-        maxr = l
+    if height < height_threshold:
+        height = l
 
-    return maxr
-
-
-def left_trim(photo):
-    e = 0
-    l, r = photo.shape
-
-    for i in range(r):
-        has_black = False
-        for j in range(l):
-            if photo[j][i] != 255:
-                has_black = True
-                break
-        if not has_black:
-            e = e + 1
-        else:
-            return photo[:, e:]
-
-    return []
-
-
-def right_trim(photo):
-    e = 0
-    l, r = photo.shape
-
-    for i in range(r):
-        has_black = False
-        for j in range(l):
-            if photo[j][r - i - 1] != 255:
-                has_black = True
-                break
-        if not has_black:
-            e = e + 1
-        else:
-            return photo[:, :r - e + 1]
-
-    return []
+    return height
 
 
 def add_row_tokens(photo):
@@ -195,10 +162,9 @@ def add_row_tokens(photo):
     last_block = 0
     e = 0
 
-    row_threshold = find_row_threshold(photo)
+    photo = normalize(photo)
 
-    photo = left_trim(photo)
-    photo = right_trim(photo)
+    row_threshold = find_row_threshold(photo)
 
     l, r = photo.shape
 
@@ -211,12 +177,10 @@ def add_row_tokens(photo):
         if not has_black:
             e = e + 1
         else:
+            if e > row_threshold:
+                tokens.append(photo[:, last_block:i + 1])
+                last_block = i + 1
             e = 0
-        if e > row_threshold:
-            tokens.append(photo[:, last_block:i + 1])
-            last_block = i + 1
-            e = 0
-
     if last_block < r:
         tokens.append(photo[:, last_block:])
 
@@ -260,8 +224,8 @@ def filter_tokens():
 
 def train():
     global tokens
-    for i in range(len(tokens)):
-        cv2.imshow("c", tokens[i])
+    for i in tokens:
+        cv2.imshow("c", i)
         cv2.waitKey(0)
     return
 
